@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriSmart — Admin Panel</title>
+    <meta name="description" content="AgriSmart Admin Dashboard — System metrics, user management and platform insights.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-primary: #070d1a;
+            --accent: #f59e0b;
+            --accent-glow: rgba(245, 158, 11, 0.25);
+            --accent-dark: #d97706;
+            --green: #34d399;
+            --green-glow: rgba(52, 211, 153, 0.2);
+            --blue: #38bdf8;
+            --purple: #a78bfa;
+            --rose: #fb7185;
+            --text-primary: #e2e8f0;
+            --text-secondary: #64748b;
+            --text-heading: #f8fafc;
+            --glass-bg: rgba(15, 23, 42, 0.6);
+            --glass-border: rgba(245, 158, 11, 0.15);
+            --sidebar-bg: linear-gradient(180deg, #0f1a0f 0%, #0a1628 50%, #0d1b2a 100%);
+            --input-bg: rgba(15, 23, 42, 0.5);
+            --input-border: rgba(100, 116, 139, 0.25);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(100,116,139,0.3); border-radius: 3px; }
+
+        .app-layout { display: flex; height: 100vh; width: 100%; }
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            width: 260px;
+            min-width: 260px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid rgba(245, 158, 11, 0.1);
+            display: flex;
+            flex-direction: column;
+            z-index: 20;
+            position: relative;
+            overflow: hidden;
+        }
+        .sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 200px;
+            background: radial-gradient(ellipse at 30% 0%, rgba(245,158,11,0.08) 0%, transparent 60%);
+            pointer-events: none;
+        }
+        .sidebar-header {
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-bottom: 1px solid rgba(245,158,11,0.1);
+        }
+        .sidebar-logo {
+            width: 42px; height: 42px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px var(--accent-glow);
+            font-size: 1.3rem;
+        }
+        .sidebar-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent), #fde68a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .admin-badge {
+            font-size: 0.6rem;
+            font-weight: 800;
+            background: var(--accent);
+            color: #000;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            letter-spacing: 0.08em;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 0.75rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .nav-label {
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--text-secondary);
+            padding: 1.25rem 1rem 0.5rem;
+            opacity: 0.5;
+        }
+        .nav-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 12px;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            text-align: left;
+        }
+        .nav-btn:hover { background: rgba(245, 158, 11, 0.08); color: var(--text-primary); transform: translateX(4px); }
+        .nav-btn.active {
+            background: rgba(245, 158, 11, 0.12);
+            color: var(--accent);
+            font-weight: 600;
+            box-shadow: inset 0 0 0 1px rgba(245,158,11,0.2);
+        }
+        .nav-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+        .sidebar-footer { padding: 1rem; border-top: 1px solid rgba(245,158,11,0.08); }
+        .user-info { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; padding: 0.5rem; }
+        .user-avatar {
+            width: 38px; height: 38px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.9rem; color: #000;
+        }
+        .user-meta p:first-child { font-size: 0.6rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }
+        .user-meta p:last-child { font-size: 0.875rem; font-weight: 700; color: var(--text-heading); }
+        .btn-logout {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid rgba(248, 113, 113, 0.2);
+            border-radius: 10px;
+            background: rgba(248, 113, 113, 0.08);
+            color: #fca5a5;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+        }
+        .btn-logout:hover { background: rgba(248, 113, 113, 0.15); color: #f87171; }
+
+        /* ── MAIN ── */
+        .main-content { flex: 1; overflow-y: auto; position: relative; background: var(--bg-primary); }
+        .main-inner { padding: 2rem 2.5rem; }
+
+        .section { display: none; animation: fadeIn 0.4s ease forwards; }
+        .section.active-section { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+        .page-header { margin-bottom: 2rem; }
+        .page-header h1 {
+            font-size: 1.9rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: var(--text-heading);
+            margin-bottom: 0.4rem;
+        }
+        .page-header h1 span { color: var(--accent); }
+        .page-header p { font-size: 0.9rem; color: var(--text-secondary); }
+
+        /* Stats grid */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; margin-bottom: 1.5rem; }
+        .stat-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.3); }
+        .stat-glow {
+            position: absolute;
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            filter: blur(40px);
+            top: -20px; right: -20px;
+            opacity: 0.5;
+        }
+        .stat-icon {
+            width: 44px; height: 44px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+        .stat-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); margin-bottom: 0.35rem; }
+        .stat-value { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; }
+
+        .stat-card.amber .stat-glow { background: var(--accent); }
+        .stat-card.amber .stat-icon { background: rgba(245,158,11,0.12); }
+        .stat-card.amber .stat-value { color: var(--accent); }
+        .stat-card.green .stat-glow { background: var(--green); }
+        .stat-card.green .stat-icon { background: rgba(52,211,153,0.12); }
+        .stat-card.green .stat-value { color: var(--green); }
+        .stat-card.blue .stat-glow { background: var(--blue); }
+        .stat-card.blue .stat-icon { background: rgba(56,189,248,0.12); }
+        .stat-card.blue .stat-value { color: var(--blue); }
+        .stat-card.purple .stat-glow { background: var(--purple); }
+        .stat-card.purple .stat-icon { background: rgba(167,139,250,0.12); }
+        .stat-card.purple .stat-value { color: var(--purple); }
+
+        /* Cards */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(245,158,11,0.1);
+            border-radius: 1.25rem;
+            padding: 1.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .card-header .bar { width: 4px; height: 24px; border-radius: 4px; background: linear-gradient(180deg, var(--accent), var(--accent-dark)); }
+        .card-header h2 { font-size: 1.1rem; font-weight: 700; color: var(--text-heading); }
+        .card-header .badge {
+            margin-left: auto;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.2rem 0.6rem;
+            border-radius: 2rem;
+            background: rgba(245,158,11,0.12);
+            color: var(--accent);
+            border: 1px solid rgba(245,158,11,0.2);
+        }
+
+        /* Two‑column layout */
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+
+        /* Data table */
+        .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table thead { background: rgba(245,158,11,0.05); }
+        .data-table th { padding: 0.75rem 1rem; text-align: left; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); border-bottom: 1px solid rgba(245,158,11,0.1); }
+        .data-table td { padding: 0.75rem 1rem; font-size: 0.85rem; color: var(--text-primary); border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .data-table tbody tr:hover { background: rgba(245,158,11,0.04); }
+        .badge-role {
+            display: inline-block;
+            padding: 0.15rem 0.55rem;
+            border-radius: 2rem;
+            font-size: 0.65rem;
+            font-weight: 700;
+        }
+        .badge-role.admin { background: rgba(245,158,11,0.15); color: var(--accent); border: 1px solid rgba(245,158,11,0.25); }
+        .badge-role.user  { background: rgba(52,211,153,0.1);  color: var(--green);  border: 1px solid rgba(52,211,153,0.2); }
+
+        /* Activity feed */
+        .activity-list { display: flex; flex-direction: column; gap: 0.75rem; max-height: 320px; overflow-y: auto; }
+        .activity-item { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.75rem; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px solid rgba(255,255,255,0.04); }
+        .activity-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+        .activity-dot.green { background: var(--green); box-shadow: 0 0 8px var(--green-glow); }
+        .activity-dot.amber { background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+        .activity-dot.blue  { background: var(--blue); }
+        .activity-text { font-size: 0.85rem; color: var(--text-primary); flex: 1; }
+        .activity-time { font-size: 0.75rem; color: var(--text-secondary); }
+
+        /* Chart */
+        .chart-wrap { position: relative; height: 260px; }
+
+        @media (max-width: 1100px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } .two-col { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+<div class="app-layout">
+
+<!-- ── SIDEBAR ── -->
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <div class="sidebar-logo">🌾</div>
+        <div>
+            <div class="sidebar-title">AgriSmart</div>
+            <span class="admin-badge">ADMIN</span>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+        <div class="nav-label">Admin</div>
+        <button onclick="showSection('overviewSection', this)" class="nav-btn active" id="navOverview">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+            Overview
+        </button>
+        <button onclick="showSection('usersSection', this)" class="nav-btn" id="navUsers">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            Users
+        </button>
+        <button onclick="showSection('farmsSection', this)" class="nav-btn" id="navFarms">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+            Farms
+        </button>
+        <button onclick="showSection('analyticsSection', this)" class="nav-btn" id="navAnalytics">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            Analytics
+        </button>
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar" id="adminAvatar">F</div>
+            <div class="user-meta">
+                <p>Administrator</p>
+                <p id="adminName">Fazil</p>
+            </div>
+        </div>
+        <button class="btn-logout" onclick="logoutAdmin()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+            Sign Out
+        </button>
+    </div>
+</aside>
+
+<!-- ── MAIN ── -->
+<main class="main-content">
+<div class="main-inner">
+
+<!-- ═══ OVERVIEW ═══ -->
+<div id="overviewSection" class="section active-section">
+    <div class="page-header">
+        <h1>Admin <span>Overview</span></h1>
+        <p>Platform-wide stats and system health at a glance</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card amber">
+            <div class="stat-glow"></div>
+            <div class="stat-icon">👥</div>
+            <div class="stat-label">Total Users</div>
+            <div class="stat-value" id="statUsers">—</div>
+        </div>
+        <div class="stat-card green">
+            <div class="stat-glow"></div>
+            <div class="stat-icon">🌾</div>
+            <div class="stat-label">Total Farms</div>
+            <div class="stat-value" id="statFarms">—</div>
+        </div>
+        <div class="stat-card blue">
+            <div class="stat-glow"></div>
+            <div class="stat-icon">🌱</div>
+            <div class="stat-label">Total Crops</div>
+            <div class="stat-value" id="statCrops">—</div>
+        </div>
+        <div class="stat-card purple">
+            <div class="stat-glow"></div>
+            <div class="stat-icon">🔬</div>
+            <div class="stat-label">AI Predictions</div>
+            <div class="stat-value" id="statPredictions">—</div>
+        </div>
+    </div>
+
+    <div class="two-col">
+        <!-- Recent Activity -->
+        <div class="glass-card">
+            <div class="card-header">
+                <div class="bar"></div>
+                <h2>Recent Activity</h2>
+                <span class="badge">Live</span>
+            </div>
+            <div class="activity-list" id="activityFeed">
+                <div class="activity-item">
+                    <div class="activity-dot green"></div>
+                    <div class="activity-text">System online — Admin panel loaded</div>
+                    <div class="activity-time">Just now</div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-dot amber"></div>
+                    <div class="activity-text">Fetching platform statistics...</div>
+                    <div class="activity-time">—</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Health -->
+        <div class="glass-card">
+            <div class="card-header">
+                <div class="bar"></div>
+                <h2>System Health</h2>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:1rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.875rem; color:var(--text-secondary);">API Server</span>
+                    <span style="color:var(--green); font-weight:700; font-size:0.875rem;" id="apiStatus">Checking...</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.875rem; color:var(--text-secondary);">Disease Detection ML</span>
+                    <span style="color:var(--green); font-weight:700; font-size:0.875rem;">● Active</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.875rem; color:var(--text-secondary);">Crop Recommendation</span>
+                    <span style="color:var(--green); font-weight:700; font-size:0.875rem;">● Active</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.875rem; color:var(--text-secondary);">Fertilizer Engine</span>
+                    <span style="color:var(--green); font-weight:700; font-size:0.875rem;">● Active</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.875rem; color:var(--text-secondary);">Weather Service</span>
+                    <span style="color:var(--green); font-weight:700; font-size:0.875rem;">● Active</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.875rem; color:var(--text-secondary);">Database</span>
+                    <span style="color:var(--green); font-weight:700; font-size:0.875rem;" id="dbStatus">Checking...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ USERS ═══ -->
+<div id="usersSection" class="section">
+    <div class="page-header">
+        <h1>User <span>Management</span></h1>
+        <p>View and manage all registered users on the platform</p>
+    </div>
+    <div class="glass-card">
+        <div class="card-header">
+            <div class="bar"></div>
+            <h2>Registered Users</h2>
+            <span class="badge" id="userCountBadge">Loading…</span>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Joined</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <tr><td colspan="5" style="text-align:center; color:var(--text-secondary); padding:2rem;">Loading users...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ FARMS ═══ -->
+<div id="farmsSection" class="section">
+    <div class="page-header">
+        <h1>Farm <span>Registry</span></h1>
+        <p>All registered farms across the platform</p>
+    </div>
+    <div class="glass-card">
+        <div class="card-header">
+            <div class="bar"></div>
+            <h2>All Farms</h2>
+            <span class="badge" id="farmCountBadge">Loading…</span>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Farm Name</th>
+                        <th>Location</th>
+                        <th>Soil Type</th>
+                        <th>Size (Acres)</th>
+                        <th>Primary Crop</th>
+                    </tr>
+                </thead>
+                <tbody id="farmsTableBody">
+                    <tr><td colspan="6" style="text-align:center; color:var(--text-secondary); padding:2rem;">Loading farms...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ ANALYTICS ═══ -->
+<div id="analyticsSection" class="section">
+    <div class="page-header">
+        <h1>Platform <span>Analytics</span></h1>
+        <p>Yield trends and usage insights</p>
+    </div>
+    <div class="glass-card">
+        <div class="card-header">
+            <div class="bar"></div>
+            <h2>Yield Prediction Trend</h2>
+        </div>
+        <div class="chart-wrap">
+            <canvas id="adminYieldChart"></canvas>
+        </div>
+    </div>
+    <div class="glass-card">
+        <div class="card-header">
+            <div class="bar"></div>
+            <h2>Disease Detections Log</h2>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr><th>#</th><th>Image</th><th>Disease</th><th>Confidence</th><th>Date</th></tr>
+                </thead>
+                <tbody id="predictionsTableBody">
+                    <tr><td colspan="5" style="text-align:center; color:var(--text-secondary); padding:2rem;">Loading predictions...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</div><!-- /main-inner -->
+</main>
+
+</div><!-- /app-layout -->
+
+<script>
+// ── Auth guard ──
+const role = localStorage.getItem('userRole');
+const name = localStorage.getItem('userName') || 'Fazil';
+if (!localStorage.getItem('loggedIn') || role !== 'admin') {
+    window.location.href = 'login.html';
+}
+
+// Set admin name
+document.getElementById('adminName').textContent = name;
+document.getElementById('adminAvatar').textContent = name.charAt(0).toUpperCase();
+
+// ── Section switching ──
+function showSection(id, btn) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active-section'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active-section');
+    if (btn) btn.classList.add('active');
+}
+
+// ── Logout ──
+function logoutAdmin() {
+    localStorage.clear();
+    window.location.href = 'login.html';
+}
+
+// ── Load Stats ──
+async function loadStats() {
+    try {
+        const res = await fetch('http://127.0.0.1:8000/dashboard-stats');
+        const data = await res.json();
+        document.getElementById('statUsers').textContent = data.total_users ?? '—';
+        document.getElementById('statFarms').textContent = data.total_farms ?? '—';
+        document.getElementById('statCrops').textContent = data.total_crops ?? '—';
+        document.getElementById('statPredictions').textContent = data.total_predictions ?? '—';
+        document.getElementById('apiStatus').innerHTML = '● Online';
+        document.getElementById('dbStatus').innerHTML = '● Connected';
+
+        // Activity feed
+        const feed = document.getElementById('activityFeed');
+        feed.innerHTML = `
+            <div class="activity-item"><div class="activity-dot green"></div><div class="activity-text">Platform has <strong>${data.total_users}</strong> registered users</div><div class="activity-time">Now</div></div>
+            <div class="activity-item"><div class="activity-dot green"></div><div class="activity-text"><strong>${data.total_farms}</strong> farms registered across the platform</div><div class="activity-time">Now</div></div>
+            <div class="activity-item"><div class="activity-dot blue"></div><div class="activity-text"><strong>${data.total_crops}</strong> crops actively tracked</div><div class="activity-time">Now</div></div>
+            <div class="activity-item"><div class="activity-dot amber"></div><div class="activity-text"><strong>${data.total_predictions}</strong> AI disease predictions made</div><div class="activity-time">Now</div></div>
+        `;
+    } catch(e) {
+        document.getElementById('apiStatus').innerHTML = '<span style="color:#f87171;">● Offline</span>';
+        document.getElementById('dbStatus').innerHTML = '<span style="color:#f87171;">● Disconnected</span>';
+    }
+}
+
+// ── Load Users ──
+async function loadUsers() {
+    try {
+        const res = await fetch('http://127.0.0.1:8000/admin/users');
+        const data = await res.json();
+        const tbody = document.getElementById('usersTableBody');
+        document.getElementById('userCountBadge').textContent = `${data.length} users`;
+        if (!data.length) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-secondary); padding:2rem;">No users found</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map((u, i) => {
+            const isAdmin = (u.name || '').toLowerCase().includes('fazil');
+            return `
+            <tr>
+                <td>${i + 1}</td>
+                <td style="font-weight:600;">${u.name || '—'}</td>
+                <td style="color:var(--text-secondary);">${u.email || '—'}</td>
+                <td><span class="badge-role ${isAdmin ? 'admin' : 'user'}">${isAdmin ? 'Admin' : 'User'}</span></td>
+                <td style="color:var(--text-secondary);">${u.created_at ? new Date(u.created_at).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : '—'}</td>
+            </tr>`;
+        }).join('');
+    } catch(e) {
+        console.error('loadUsers error:', e);
+        document.getElementById('usersTableBody').innerHTML = '<tr><td colspan="5" style="text-align:center; color:#f87171; padding:2rem;">Could not load users — ' + e.message + '</td></tr>';
+    }
+}
+
+// ── Load Farms ──
+async function loadFarms() {
+    try {
+        const res = await fetch('http://127.0.0.1:8000/farms');
+        const data = await res.json();
+        const farms = data.farms || data || [];
+        const tbody = document.getElementById('farmsTableBody');
+        document.getElementById('farmCountBadge').textContent = `${farms.length} farms`;
+        if (!farms.length) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-secondary); padding:2rem;">No farms registered yet</td></tr>';
+            return;
+        }
+        tbody.innerHTML = farms.map((f, i) => `
+            <tr>
+                <td>${i + 1}</td>
+                <td style="font-weight:600;">${f.farm_name || f.name || '—'}</td>
+                <td>${f.location || '—'}</td>
+                <td>${f.soil_type || '—'}</td>
+                <td>${f.farm_size || f.size || '—'}</td>
+                <td>${f.crop_type || f.crop || '—'}</td>
+            </tr>
+        `).join('');
+    } catch(e) {
+        document.getElementById('farmsTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center; color:#f87171; padding:2rem;">Could not load farms</td></tr>';
+    }
+}
+
+// ── Load Predictions ──
+async function loadPredictions() {
+    try {
+        const res = await fetch('http://127.0.0.1:8000/predictions');
+        const data = await res.json();
+        const preds = data.predictions || data || [];
+        const tbody = document.getElementById('predictionsTableBody');
+        if (!preds.length) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-secondary); padding:2rem;">No predictions yet</td></tr>';
+            return;
+        }
+        tbody.innerHTML = preds.slice(0, 20).map((p, i) => `
+            <tr>
+                <td>${i + 1}</td>
+                <td>${p.image_path ? `<img src="http://127.0.0.1:8000/${p.image_path}" style="width:48px;height:48px;border-radius:8px;object-fit:cover;" onerror="this.style.display='none'">` : '—'}</td>
+                <td style="font-weight:600;">${p.disease || p.prediction || '—'}</td>
+                <td style="color:var(--accent);">${p.confidence ? (parseFloat(p.confidence)*100).toFixed(1)+'%' : '—'}</td>
+                <td style="color:var(--text-secondary);">${p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</td>
+            </tr>
+        `).join('');
+    } catch(e) {
+        document.getElementById('predictionsTableBody').innerHTML = '<tr><td colspan="5" style="text-align:center; color:#f87171; padding:2rem;">Could not load predictions</td></tr>';
+    }
+}
+
+// ── Yield Chart ──
+async function loadChart() {
+    try {
+        const res = await fetch('http://127.0.0.1:8000/yield-trend');
+        const data = await res.json();
+        const ctx = document.getElementById('adminYieldChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels || ['Jan','Feb','Mar','Apr','May','Jun'],
+                datasets: [{
+                    label: 'Yield (tons/ha)',
+                    data: data.values || [2.1, 2.4, 2.8, 3.2, 3.0, 3.5],
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245,158,11,0.08)',
+                    borderWidth: 2.5,
+                    pointBackgroundColor: '#f59e0b',
+                    pointRadius: 5,
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: '#94a3b8', font: { family: 'Inter', size: 12 } } } },
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font: { family: 'Inter' } } },
+                    y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font: { family: 'Inter' } } }
+                }
+            }
+        });
+    } catch(e) {}
+}
+
+// ── Init ──
+loadStats();
+loadUsers();
+loadFarms();
+loadPredictions();
+loadChart();
+</script>
+</body>
+</html>
